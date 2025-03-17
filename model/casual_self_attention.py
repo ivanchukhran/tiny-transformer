@@ -4,18 +4,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from pydantic import BaseModel, ConfigDict
-
-
-class BaseConfig(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    pass
-
-
-class AttentionConfig(BaseConfig):
-    num_heads: int
-    num_embeddings: int
-    block_size: int
+from .model_config import AttentionConfig
 
 
 class CasualSelfAttention(nn.Module):
