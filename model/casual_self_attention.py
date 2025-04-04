@@ -4,11 +4,11 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from .model_config import AttentionConfig
+from .model_config import ModelConfig
 
 
 class CasualSelfAttention(nn.Module):
-    def __init__(self, config: AttentionConfig):
+    def __init__(self, config: ModelConfig):
         super(CasualSelfAttention, self).__init__()
         assert config.num_embeddings % config.num_heads == 0, (
             "Attention dimensions must be divisible by the number of heads."
@@ -42,7 +42,7 @@ class CasualSelfAttention(nn.Module):
 
 if __name__ == "__main__":
     x = torch.randn(1, 10, 512)
-    config = AttentionConfig(num_heads=8, num_embeddings=512, block_size=10)
+    config = ModelConfig(num_heads=8, num_embeddings=512, block_size=10)
     model = CasualSelfAttention(config)
     y = model(x)
     print(y.size())

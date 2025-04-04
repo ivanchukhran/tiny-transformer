@@ -1,10 +1,10 @@
 import torch
 from torch import nn
 
-from .model_config import AttentionConfig
+from .model_config import ModelConfig
 
 class MLP(nn.Module):
-    def __init__(self, config: AttentionConfig):
+    def __init__(self, config: ModelConfig):
         super(MLP, self).__init__()
         self.fc1 = nn.Linear(config.num_embeddings, 4 * config.num_embeddings)
         self.fc2 = nn.Linear(4 * config.num_embeddings, config.num_embeddings)
