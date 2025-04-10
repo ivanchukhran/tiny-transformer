@@ -43,9 +43,6 @@ class TranslationDataset(Dataset):
             "tgt": torch.tensor(tgt_tokens, dtype=torch.long),
         }
 
-    def get_collate_fn(self):  # just for single import
-        return collate_fn
-
 
 def collate_fn(batch):
     max_src_len = max([item["src"].size(0) for item in batch])

@@ -1,3 +1,3 @@
-from .translation_dataset import TranslationDataset
+from .translation_dataset import TranslationDataset, collate_fn
 
-__all__ = ["TranslationDataset"]
+__all__ = ["TranslationDataset", "collate_fn"]
