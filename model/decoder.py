@@ -1,8 +1,8 @@
 import torch
 from torch import nn
 
-from model.casual_self_attention import CasualSelfAttention
-from model.mlp import MLP
+from .attention import CasualSelfAttention, CasualCrossAttention
+from .feed_forward import FeedForward
 
 from .model_config import ModelConfig
 
@@ -11,11 +11,11 @@ class DecoderLayer(nn.Module):
     def __init__(self, config: ModelConfig):
         super(DecoderLayer, self).__init__()
         self.self_attention = CasualSelfAttention(config)
-        self.cross_attenintion = CasualSelfAttention(config)
-        self.mlp = MLP(config)
-        self.norm_1 = nn.LayerNorm(config.num_embeddings)
-        self.norm_2 = nn.LayerNorm(config.num_embeddings)
-        self.norm_3 = nn.LayerNorm(config.num_embeddings)
+        self.cross_attenintion = CasualCrossAttention(config)
+        self.mlp = FeedForward(config)
+        self.norm_1 = nn.LayerNorm(config.n_embd)
+        self.norm_2 = nn.LayerNorm(config.n_embd)
+        self.norm_3 = nn.LayerNorm(config.n_embd)
         self.dropout = nn.Dropout(config.dropout_rate)
 
     def forward(self, x: torch.Tensor, encoder_output: torch.Tensor):

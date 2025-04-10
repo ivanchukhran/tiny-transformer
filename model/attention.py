@@ -23,6 +23,7 @@ class CasualSelfAttention(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        device = x.device
         B, T, C = x.size()  # batch size, target sequence length, number of embeddings
         qkv = self.attention(x)
         q, k, v = qkv.split(self.num_embeddings, dim=2)
@@ -30,7 +31,7 @@ class CasualSelfAttention(nn.Module):
         k = k.view(B, T, self.num_heads, C // self.num_heads).transpose(1, 2)
         v = v.view(B, T, self.num_heads, C // self.num_heads).transpose(1, 2)
         att = (q @ k.transpose(-2, -1)) / (1 * math.sqrt(k.size(-1)))
-        att = att.masked_fill(self.bias[:, :, :T, :T] == 0, float("-inf"))
+        att = att.masked_fill((self.bias[:, :, :T, :T] == 0).to(device), float("-inf"))
         att = F.softmax(att, dim=-1)
         y = att @ v
         y = (
@@ -38,7 +39,6 @@ class CasualSelfAttention(nn.Module):
         )  # reassemble the heads to the original shape
         y = self.projection(y)
         return y
-
 
 
 class CasualCrossAttention(nn.Module):
@@ -60,8 +60,11 @@ class CasualCrossAttention(nn.Module):
         )
 
     def forward(self, x: torch.Tensor, context: torch.Tensor) -> torch.Tensor:
-        B, T, C = x.size() # batch size, target sequence length, number of embeddings
-        B, S, C = context.size() # batch size, source sequence length, number of embeddings
+        device = x.device
+        B, T, C = x.size()  # batch size, target sequence length, number of embeddings
+        B, S, C = (
+            context.size()
+        )  # batch size, source sequence length, number of embeddings
         q = self.q_proj(x)
         k = self.k_proj(context)
         v = self.v_proj(context)
@@ -69,14 +72,13 @@ class CasualCrossAttention(nn.Module):
         k = k.view(B, S, self.num_heads, C // self.num_heads).transpose(1, 2)
         v = v.view(B, S, self.num_heads, C // self.num_heads).transpose(1, 2)
         att = (q @ k.transpose(-2, -1)) / (1 * math.sqrt(k.size(-1)))
-        att = att.masked_fill(self.bias[:, :, :T, :S] == 0, float("-inf"))
+        att = att.masked_fill((self.bias[:, :, :T, :S] == 0).to(device), float("-inf"))
         att = F.softmax(att, dim=-1)
         y = att @ v
-        y = (
-            y.transpose(1, 2).contiguous().view(B, T, C)
-        )
+        y = y.transpose(1, 2).contiguous().view(B, T, C)
         y = self.projection(y)
         return y
+
 
 if __name__ == "__main__":
     x = torch.randn(1, 10, 512)
