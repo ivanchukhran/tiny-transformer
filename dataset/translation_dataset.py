@@ -45,9 +45,6 @@ class TranslationDataset(Dataset):
         }
 
     def collate_fn(self, batch):
-        # max_src_len = max([item["src"].size(0) for item in batch])
-        # max_tgt_len = max([item["tgt"].size(0) for item in batch])
-
         batch_size = len(batch)
         pad_token_id = 0
 
@@ -63,9 +60,6 @@ class TranslationDataset(Dataset):
             tgt = item["tgt"]
             src_padded[i, : src.size(0)] = src
             tgt_padded[i, : tgt.size(0)] = tgt
-
-        # tgt_input = tgt_padded[:, :-1]
-        # tgt_output = tgt_padded[:, 1:].clone()
 
         return {
             "src": src_padded.long(),
