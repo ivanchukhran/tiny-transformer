@@ -46,8 +46,12 @@ def main():
     print(f"Loading datasets from {train_filepath} and {test_filepath}")
 
     train_dataset, test_dataset = (
-        TranslationDataset(train_filepath, max_length=model_config.block_size, tokenizer=tokenizer),
-        TranslationDataset(test_filepath, max_length=model_config.block_size, tokenizer=tokenizer),
+        TranslationDataset(
+            train_filepath, max_length=model_config.block_size, tokenizer=tokenizer
+        ),
+        TranslationDataset(
+            test_filepath, max_length=model_config.block_size, tokenizer=tokenizer
+        ),
     )
     collate_fn = train_dataset.collate_fn
     train_loader, test_loader = (
@@ -57,7 +61,9 @@ def main():
             shuffle=True,
             collate_fn=collate_fn,
         ),
-        DataLoader(test_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn),
+        DataLoader(
+            test_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn
+        ),
     )
 
     epoch = 0

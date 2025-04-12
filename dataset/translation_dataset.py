@@ -1,9 +1,8 @@
 import json
 
-from tiktoken import Encoding
-
 import tiktoken
 import torch
+from tiktoken import Encoding
 from torch.utils.data import Dataset
 
 
