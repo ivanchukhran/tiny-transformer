@@ -1,7 +1,6 @@
 from typing import Callable
 
 from pydantic import BaseModel, ConfigDict
-
 from torch.nn import functional as F
 
 
