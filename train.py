@@ -1,15 +1,13 @@
+import json
 import os
 from time import time
 
-from tqdm import tqdm
-
 import tiktoken
-
-from pydantic import BaseModel, ConfigDict
-
 import torch
-from torch.optim import Optimizer, AdamW
+from pydantic import BaseModel, ConfigDict
+from torch.optim import AdamW, Optimizer
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 from dataset.translation_dataset import TranslationDataset
 from model.model_config import ModelConfig
@@ -30,7 +28,7 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     if device == "cuda":
         torch.cuda.empty_cache()
-    batch_size = 8
+    batch_size = 4
     epochs = 10
     tokenizer = tiktoken.get_encoding("gpt2")
     vocab_size = tokenizer.max_token_value + 1
@@ -48,12 +46,8 @@ def main():
     print(f"Loading datasets from {train_filepath} and {test_filepath}")
 
     train_dataset, test_dataset = (
-        TranslationDataset(
-            train_filepath, max_length=model_config.block_size, tokenizer=tokenizer
-        ),
-        TranslationDataset(
-            test_filepath, max_length=model_config.block_size, tokenizer=tokenizer
-        ),
+        TranslationDataset(train_filepath, max_length=model_config.block_size, tokenizer=tokenizer),
+        TranslationDataset(test_filepath, max_length=model_config.block_size, tokenizer=tokenizer),
     )
     collate_fn = train_dataset.collate_fn
     train_loader, test_loader = (
@@ -63,12 +57,18 @@ def main():
             shuffle=True,
             collate_fn=collate_fn,
         ),
-        DataLoader(
-            test_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn
-        ),
+        DataLoader(test_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn),
     )
 
     epoch = 0
+    losses = {
+        "train": [],
+        "val": [],
+    }
+    if not os.path.exists("checkpoints"):
+        os.makedirs("checkpoints")
+    if not os.path.exists("losses"):
+        os.makedirs("losses")
     for epoch in range(epochs):
         model.train()
         start_time = time()
@@ -94,15 +94,17 @@ def main():
 
         train_loss /= len(train_loader)
         val_loss /= len(test_loader)
+        losses["train"].append(train_loss)
+        losses["val"].append(val_loss)
+
+        if device == "cuda":
+            torch.cuda.empty_cache()
 
         end_time = time()
         elapsed_time = end_time - start_time
         print(
             f"Epoch {epoch + 1}/{epochs} completed in {elapsed_time:.2f} seconds. Train loss: {train_loss:.4f}, Val loss: {val_loss:.4f}"
         )
-    if not os.path.exists("checkpoints"):
-        os.makedirs("checkpoints")
-    # Save the model
     checkpoint_file = f"checkpoints/tiny_transformer_{epoch}.pth"
     torch.save(
         {
@@ -112,7 +114,10 @@ def main():
         },
         checkpoint_file,
     )
-    print("Model saved as tiny_transformer.pth")
+    print(f"Model saved as {checkpoint_file}")
+
+    with open("losses/losses.json", "w") as f:
+        json.dump(losses, f)
 
 
 if __name__ == "__main__":
