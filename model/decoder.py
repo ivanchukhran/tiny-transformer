@@ -1,9 +1,8 @@
 import torch
 from torch import nn
 
-from .attention import CasualSelfAttention, CasualCrossAttention
+from .attention import CasualCrossAttention, CasualSelfAttention
 from .feed_forward import FeedForward
-
 from .model_config import ModelConfig
 
 

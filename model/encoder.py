@@ -1,9 +1,9 @@
 import torch
 from torch import nn
 
+from .attention import CasualSelfAttention
 from .feed_forward import FeedForward
 from .model_config import ModelConfig
-from .attention import CasualSelfAttention
 
 
 class EncoderLayer(nn.Module):
