@@ -179,8 +179,8 @@ class TransformerDecoderLayer(nn.Module):
     ):
         super(TransformerDecoderLayer, self).__init__()
         self.norm_first = config.norm_first
-        self.self_attn = MultiheadAttention(config)
-        self.multihead_attn = MultiheadAttention(config, is_causal=True)
+        self.self_attn = MultiheadAttention(config, is_causal=True)
+        self.multihead_attn = MultiheadAttention(config)
         self.feedforward = FeedForward(config)
 
         self.norm1 = nn.LayerNorm(config.embed_dim)
@@ -296,8 +296,12 @@ def main():
     decoder_out = decoder_layer(tgt_float, out)
 
     # Create integer token tensors for our implementation
-    src_tokens = torch.randint(0, vocab_size, (32, config.block_size))  # [batch, seq_len]
-    tgt_tokens = torch.randint(0, vocab_size, (32, config.block_size))  # [batch, seq_len]
+    src_tokens = torch.randint(
+        0, vocab_size, (32, config.block_size)
+    )  # [batch, seq_len]
+    tgt_tokens = torch.randint(
+        0, vocab_size, (32, config.block_size)
+    )  # [batch, seq_len]
 
     # Test our implementation
     my_out = my_encoder_layer(src_float)  # Still uses float input
