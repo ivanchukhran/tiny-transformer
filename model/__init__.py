@@ -1,4 +1,4 @@
-from tiny_transformer import (
+from .tiny_transformer import (
     ModelConfig,
     PositionalEncoding,
     TinyTransformer,

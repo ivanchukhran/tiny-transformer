@@ -1,7 +1,6 @@
 import math
 from typing import Callable
 
-import tiktoken
 import torch
 import torch.nn.functional as F
 from pydantic import BaseModel, ConfigDict
@@ -167,8 +166,8 @@ class TransformerEncoderLayer(nn.Module):
             x += self.dropout1(self.self_attn(self.norm1(x)))
             x += self.feedforward(self.norm2(x))
         else:
-            x += self.norm1(x + self.self_attn(x))
-            x += self.norm2(x + self.feedforward(x))
+            x = self.norm1(x + self.dropout1(self.self_attn(x)))
+            x = self.norm2(x + self.dropout2(self.feedforward(x)))
         return x
 
 
@@ -187,6 +186,10 @@ class TransformerDecoderLayer(nn.Module):
         self.norm2 = nn.LayerNorm(config.embed_dim)
         self.norm3 = nn.LayerNorm(config.embed_dim)
 
+        self.dropout1 = nn.Dropout(config.dropout)
+        self.dropout2 = nn.Dropout(config.dropout)
+        self.dropout3 = nn.Dropout(config.dropout)
+
     def forward(self, x: torch.Tensor, context: torch.Tensor):
         r"""Pass the inputs trough the decoder layer.
 
@@ -203,9 +206,11 @@ class TransformerDecoderLayer(nn.Module):
             x += self.multihead_attn(self.norm2(x), key=context, value=context)
             x += self.feedforward(self.norm3(x))
         else:
-            x = self.norm1(x + self.self_attn(x))
-            x = self.norm2(x + self.multihead_attn(x, key=context, value=context))
-            x = self.norm3(x + self.feedforward(x))
+            x = self.norm1(x + self.dropout1(self.self_attn(x)))
+            x = self.norm2(
+                x + self.dropout2(self.multihead_attn(x, key=context, value=context))
+            )
+            x = self.norm3(x + self.dropout3(self.feedforward(x)))
         return x
 
 
@@ -247,75 +252,28 @@ class TinyTransformer(nn.Module):
         self.decoder = TransformerDecoder(config)
         self.output_layer = nn.Linear(config.embed_dim, config.vocab_size)
 
-    def forward(self, x: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        print(x.shape, target.shape)
-        print("embedding dim:", self.token_embedding.embedding_dim)
-        src_emb = self.token_embedding(x.to(torch.long)) * math.sqrt(
+    def forward(self, src: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass of the model.
+
+        Args:
+            src: Source sequence [batch_size, src_len]
+            target: Decoder input sequence [batch_size, tgt_len]
+
+        Returns:
+            logits: Output logits [batch_size, tgt_len, vocab_size]
+        """
+        src_emb = self.token_embedding(src) * math.sqrt(
             self.token_embedding.embedding_dim
         )
         src_emb = self.positional_encoding(src_emb)
         context = self.encoder(src_emb)
 
-        target_emb = self.token_embedding(target) * math.sqrt(
+        tgt_emb = self.token_embedding(target) * math.sqrt(
             self.token_embedding.embedding_dim
         )
-        target_emb = self.positional_encoding(target_emb)
-        output = self.decoder(target_emb, context)
-        logits = self.output_layer(output)
+        tgt_emb = self.positional_encoding(tgt_emb)
+        decoder_output = self.decoder(tgt_emb, context)
+
+        logits = self.output_layer(decoder_output)
         return logits
-
-
-def main():
-    torch.manual_seed(42)
-
-    max_length = 10
-    embed_dim = 512
-    n_heads = 8
-
-    # Initialize tokenizer
-    tokenizer = tiktoken.get_encoding("gpt2")
-    vocab_size = tokenizer.n_vocab
-
-    config = ModelConfig(
-        vocab_size=vocab_size, embed_dim=embed_dim, n_heads=n_heads, n_layers=1
-    )
-
-    # Create model
-    pos_encoding = PositionalEncoding(config)
-    encoder_layer = nn.TransformerEncoderLayer(d_model=512, nhead=8, batch_first=True)
-    decoder_layer = nn.TransformerDecoderLayer(d_model=512, nhead=8, batch_first=True)
-    my_encoder_layer = TransformerEncoderLayer(config)
-    my_decoder_layer = TransformerDecoderLayer(config)
-
-    # Create float tensors for PyTorch's built-in transformer layers
-    src_float = torch.rand((32, config.block_size, embed_dim))
-    tgt_float = torch.rand((32, config.block_size, embed_dim))
-
-    # Test PyTorch's layers
-    out = encoder_layer(src_float)
-    decoder_out = decoder_layer(tgt_float, out)
-
-    # Create integer token tensors for our implementation
-    src_tokens = torch.randint(
-        0, vocab_size, (32, config.block_size)
-    )  # [batch, seq_len]
-    tgt_tokens = torch.randint(
-        0, vocab_size, (32, config.block_size)
-    )  # [batch, seq_len]
-
-    # Test our implementation
-    my_out = my_encoder_layer(src_float)  # Still uses float input
-    my_decoder_out = my_decoder_layer(tgt_float, my_out)  # Still uses float input
-
-    # Shapes should match for the float tensor versions
-    assert out.shape == my_out.shape, "Shapes should be equal"
-    assert decoder_out.shape == my_decoder_out.shape, "Shapes should be equal"
-
-    # Test the full transformer with token IDs
-    transformer = TinyTransformer(config)
-    transformer_output = transformer(src_tokens, tgt_tokens)
-    print("transformer output:", transformer_output.shape)
-
-
-if __name__ == "__main__":
-    main()
